@@ -36,6 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.checkListTemplate = exports.logTemplates = exports.logSchema = exports.queryList = void 0;
 var db_node_pg_1 = require("./db/db-node-pg");
 function queryList() {
     return __awaiter(this, void 0, void 0, function () {
@@ -51,5 +52,130 @@ function queryList() {
         });
     });
 }
-exports.default = queryList;
-queryList();
+exports.queryList = queryList;
+function logSchema() {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, tables, columns;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, (0, db_node_pg_1.querySchema)('tables')];
+                case 1:
+                    response = _a.sent();
+                    tables = response.rows;
+                    return [4 /*yield*/, (0, db_node_pg_1.querySchema)('columns')];
+                case 2:
+                    //console.log('tables :' + JSON.stringify, response.rows);
+                    response = _a.sent();
+                    columns = response.rows;
+                    //console.log('columns :' + JSON.stringify, response.rows);
+                    return [2 /*return*/, { tables: tables, columns: columns }];
+            }
+        });
+    });
+}
+exports.logSchema = logSchema;
+function logTemplates() {
+    return __awaiter(this, void 0, void 0, function () {
+        var response, table_template, view_template, list_template;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, (0, db_node_pg_1.querySchema)('table_template')];
+                case 1:
+                    response = _a.sent();
+                    table_template = response.rows;
+                    return [4 /*yield*/, (0, db_node_pg_1.querySchema)('view_template')];
+                case 2:
+                    //console.log('table_template :' + JSON.stringify, response.rows);
+                    response = _a.sent();
+                    view_template = response.rows;
+                    return [4 /*yield*/, (0, db_node_pg_1.querySchema)('list_template')];
+                case 3:
+                    //console.log('view_template :' + JSON.stringify, response.rows);
+                    response = _a.sent();
+                    list_template = response.rows;
+                    //console.log('list_template :' + JSON.stringify, response.rows);
+                    return [2 /*return*/, { table_template: table_template, view_template: view_template, list_template: list_template }];
+            }
+        });
+    });
+}
+exports.logTemplates = logTemplates;
+function checkListTemplate() {
+    return __awaiter(this, void 0, void 0, function () {
+        var _a, list_template, view_template, table_template, matchedTableColumn, matchedViewColumn, unMatchedListColumn, matchedTableAndViewColumn;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, logTemplates()];
+                case 1:
+                    _a = _b.sent(), list_template = _a.list_template, view_template = _a.view_template, table_template = _a.table_template;
+                    matchedTableColumn = 0;
+                    matchedViewColumn = 0;
+                    unMatchedListColumn = 0;
+                    matchedTableAndViewColumn = 0;
+                    list_template.forEach(function (list) {
+                        console.log('list_template view / table / column:' +
+                            list.view_name +
+                            ' / ' +
+                            list.table_name +
+                            ' / ' +
+                            list.column_name);
+                        var view = null;
+                        var table = null;
+                        if (list.view_name) {
+                            view = view_template.find(function (view) {
+                                return view.view_name === list.view_name &&
+                                    view.column_name === list.column_name;
+                            });
+                            if (view) {
+                                matchedViewColumn++;
+                            }
+                            /*
+                            console.log(
+                                view
+                                    ? 'view_template :' + JSON.stringify(view)
+                                    : 'view_template not found'
+                            );
+                            */
+                        }
+                        if (list.table_name) {
+                            table = table_template.find(function (table) {
+                                return table.table_name === list.table_name &&
+                                    table.column_name === list.column_name;
+                            });
+                            if (table) {
+                                matchedTableColumn++;
+                            }
+                            /*
+                            console.log(
+                                table
+                                    ? 'table_template :' + JSON.stringify(table)
+                                    : 'table_template not found'
+                            );
+                            */
+                        }
+                        if (view && table) {
+                            matchedTableAndViewColumn++;
+                        }
+                        if (!view && !table) {
+                            unMatchedListColumn++;
+                        }
+                        /*
+                        const view = view_template.find(
+                            (view) => view.view_name === list.view_name
+                        );
+                
+                        console.log('view_template :' + JSON.stringify(view));
+                        const table = table_template.find(
+                            (table) => table.table_name === view.table_name
+                        );
+                        console.log('table_template :' + JSON.stringify(table));
+                        */
+                    });
+                    console.log("Check view list\n:matchedTableColumn: ".concat(matchedTableColumn, " \nmatchedViewColumn: ").concat(matchedViewColumn, " \nunMatchedListColumn: ").concat(unMatchedListColumn, " \nmatchedTableAndViewColumn: ").concat(matchedTableAndViewColumn));
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.checkListTemplate = checkListTemplate;
+//checkListTemplate();

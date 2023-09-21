@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.upsertForm = exports.queryViewData = exports.queryViewColumns = exports.queryMasterTable = void 0;
+exports.upsertForm = exports.queryViewData = exports.queryViewColumns = exports.querySchema = void 0;
 //import { unknownInputs } from "@/lib/form-utils"
 require("dotenv/config");
 var pg_1 = require("pg");
@@ -52,24 +52,46 @@ var pgConfig = {
     max: 10,
     ssl: true,
 };
-var queryMasterTable = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var pool, res;
+var querySchema = function (mode) { return __awaiter(void 0, void 0, void 0, function () {
+    var pool, table, res;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 pool = new pg_1.Pool(pgConfig);
-                return [4 /*yield*/, pool.query('SELECT * FROM gv_dev.master_table')];
+                table = null;
+                switch (mode) {
+                    case 'tables':
+                        table = 'gv_dev.schema_tables';
+                        break;
+                    case 'columns':
+                        table = 'gv_dev.schema_columns';
+                        break;
+                    case 'table_template':
+                        table = 'gv_dev.table_template';
+                        break;
+                    case 'view_template':
+                        table = 'gv_dev.view_template';
+                        break;
+                    case 'list_template':
+                        table = 'gv_dev.list_template';
+                        break;
+                    default:
+                        console.log('querySchema: unknown mode ' + mode);
+                        return [2 /*return*/, null];
+                }
+                return [4 /*yield*/, pool.query('SELECT * FROM ' + table)];
             case 1:
                 res = _a.sent();
-                console.log(' queryMasterTable : ' + res.rows[0]);
+                //console.log(' queryMasterTable : ' + res.rows[0]);
                 return [4 /*yield*/, pool.end()];
             case 2:
+                //console.log(' queryMasterTable : ' + res.rows[0]);
                 _a.sent();
                 return [2 /*return*/, res];
         }
     });
 }); };
-exports.queryMasterTable = queryMasterTable;
+exports.querySchema = querySchema;
 function queryViewColumns(viewList) {
     return __awaiter(this, void 0, void 0, function () {
         var pool, sql, values, res;

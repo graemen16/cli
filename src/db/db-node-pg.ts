@@ -20,11 +20,33 @@ const pgConfig = {
 	ssl: true,
 };
 
-export const queryMasterTable = async () => {
+export const querySchema = async (mode: string) => {
 	const pool = new Pool(pgConfig);
 	// you can also use async/await
-	const res = await pool.query('SELECT * FROM gv_dev.master_table');
-	console.log(' queryMasterTable : ' + res.rows[0]);
+	let table: string = null;
+	switch (mode) {
+		case 'tables':
+			table = 'gv_dev.schema_tables';
+			break;
+		case 'columns':
+			table = 'gv_dev.schema_columns';
+			break;
+		case 'table_template':
+			table = 'gv_dev.table_template';
+			break;
+		case 'view_template':
+			table = 'gv_dev.view_template';
+			break;
+		case 'list_template':
+			table = 'gv_dev.list_template';
+			break;
+		default:
+			console.log('querySchema: unknown mode ' + mode);
+			return null;
+	}
+
+	const res = await pool.query('SELECT * FROM ' + table);
+	//console.log(' queryMasterTable : ' + res.rows[0]);
 	await pool.end();
 	return res;
 };
