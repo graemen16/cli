@@ -1,4 +1,4 @@
-import fs from 'fs';
+import * as fs from 'fs';
 import { exit } from 'process';
 
 export default function dbFileCheck() {

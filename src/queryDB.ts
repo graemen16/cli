@@ -1,6 +1,12 @@
-import fs from 'fs';
+import * as fs from 'fs';
 
-export default async function queryDB(externalFunction) {
+export default async function queryDB(
+	externalFunction:
+		| {
+				(info: any): Promise<void>;
+		  }
+		| undefined = undefined
+) {
 	try {
 		let info = [];
 

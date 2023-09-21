@@ -1,9 +1,11 @@
 import inquirer from 'inquirer';
-import fs from 'fs';
+import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import queryDB from './queryDB.js';
 
-export default async function addData(info) {
+export default async function addData(
+	info: { id: any; name: any; phone: any; age: any }[]
+) {
 	try {
 		const answers = await inquirer.prompt([
 			{
@@ -51,7 +53,9 @@ export default async function addData(info) {
 	}
 }
 
-async function createDetails(info) {
+async function createDetails(
+	info: { id: any; name: any; phone: any; age: any }[]
+) {
 	await fs.writeFile('db.json', JSON.stringify(info), function (err) {
 		if (err) {
 			console.log(err);
