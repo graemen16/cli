@@ -9,7 +9,10 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"console-stamp": "^3.1.2",
+		"dotenv": "^16.3.1",
 		"inquirer": "^9.2.11",
+		"pg": "^8.11.3",
 		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
