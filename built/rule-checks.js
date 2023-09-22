@@ -171,7 +171,7 @@ function tableTemplateInSchema(_a) {
         if (typeof table.table_name === 'string' &&
             typeof table.column_name === 'string') {
             checked += checkTableInSchema(table.table_name);
-            checked += checkColumnInSchema(table.table_name, table.column_name);
+            checked += checkColumnInSchema(table.table_name, table.column_name, table);
         }
     });
     if (errors.length > 0) {
@@ -190,7 +190,7 @@ function tableTemplateInSchema(_a) {
         }
         return checked;
     }
-    function checkColumnInSchema(table_name, column_name) {
+    function checkColumnInSchema(table_name, column_name, tableInTemplate) {
         var checked = 0;
         if (table_name && column_name) {
             var column = columns.find(function (column) {
@@ -200,7 +200,63 @@ function tableTemplateInSchema(_a) {
                 errors.push("table_template: ".concat(table_name, " / ").concat(column_name, " is not in schema"));
             }
             checked = 1;
-            //TODO check column data type and default value
+            // check column data type and default value between tableInTemplate and column
+            if (column && tableInTemplate) {
+                var schemaType = column.data_type;
+                var templateType_1 = tableInTemplate.type;
+                if (typeof schemaType !== 'string') {
+                    errors.push("table_schema: ".concat(table_name, " / ").concat(column_name, " data_type is not a string"));
+                    return checked;
+                }
+                if (typeof templateType_1 !== 'string') {
+                    errors.push("table_template: ".concat(table_name, " / ").concat(column_name, " data_type is not a string"));
+                    return checked;
+                }
+                var templateTypeInSchmaFormat = function () {
+                    if (templateType_1.startsWith('varchar')) {
+                        return 'character varying';
+                    }
+                    if (templateType_1.startsWith('int')) {
+                        return 'integer';
+                    }
+                    if (templateType_1.startsWith('serial')) {
+                        return 'integer';
+                    }
+                    switch (templateType_1) {
+                        case 'text':
+                            return 'text';
+                        case 'timestamp':
+                            return 'timestamp without time zone';
+                        case 'timestamptz':
+                            return 'timestamp with time zone';
+                        case 'boolean':
+                            return 'boolean';
+                        default:
+                            return templateType_1;
+                    }
+                };
+                if (schemaType !== templateTypeInSchmaFormat()) {
+                    errors.push("table_template: ".concat(table_name, " / ").concat(column_name, " data_type is different between table_template and schema"));
+                }
+                // TODO check default value
+                if (schemaType === 'charachter varying') {
+                    // find length of varchar in template from format varchar(255)
+                    var templateVarcharLength = parseInt(templateType_1.match(/\d+/)[0]);
+                    var schemaVarcharLength = typeof column.character_maximum_length === 'number'
+                        ? column.character_maximum_length
+                        : null;
+                    if (schemaVarcharLength &&
+                        schemaVarcharLength < templateVarcharLength) {
+                        errors.push("schema: ".concat(table_name, " / ").concat(column_name, " character_maximum_length is too short"));
+                    }
+                }
+                // check nullability
+                var schemaNullable = column.is_nullable === 'YES';
+                var templateNullable = !tableInTemplate.not_null;
+                if (schemaNullable !== templateNullable) {
+                    errors.push("schema: ".concat(table_name, " / ").concat(column_name, " is_nullable is different between table_template and schema"));
+                }
+            }
         }
         return checked;
     }

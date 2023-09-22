@@ -15,14 +15,16 @@ export default async function main() {
 	// get schema
 	const { tables, columns } = await logSchema();
 
-	results.push(
-		listColInTemplates({ list_template, view_template, table_template })
-	);
-	results.push(
-		namesAreSnakeCase({ list_template, view_template, table_template })
-	);
+	false &&
+		results.push(
+			listColInTemplates({ list_template, view_template, table_template })
+		);
+	false &&
+		results.push(
+			namesAreSnakeCase({ list_template, view_template, table_template })
+		);
 
-	results.push(tablesHaveIdColumn({ tables, columns }));
+	false && results.push(tablesHaveIdColumn({ tables, columns }));
 	results.push(tableTemplateInSchema({ tables, columns, table_template }));
 	console.log('Results:');
 	console.log(results);

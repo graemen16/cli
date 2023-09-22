@@ -196,6 +196,7 @@ export function tablesHaveIdColumn({
 	console.log(`Tables have id: checked ${checked} tables`);
 	return { test, status, errors };
 }
+
 // check that each table and column in table_template has corresponding table and column in schema
 export function tableTemplateInSchema({
 	tables,
@@ -216,7 +217,11 @@ export function tableTemplateInSchema({
 			typeof table.column_name === 'string'
 		) {
 			checked += checkTableInSchema(table.table_name);
-			checked += checkColumnInSchema(table.table_name, table.column_name);
+			checked += checkColumnInSchema(
+				table.table_name,
+				table.column_name,
+				table
+			);
 		}
 	});
 	if (errors.length > 0) {
@@ -238,7 +243,11 @@ export function tableTemplateInSchema({
 		}
 		return checked;
 	}
-	function checkColumnInSchema(table_name: string, column_name: string) {
+	function checkColumnInSchema(
+		table_name: string,
+		column_name: string,
+		tableInTemplate: unknownInputs
+	) {
 		let checked = 0;
 		if (table_name && column_name) {
 			const column = columns.find(
@@ -251,7 +260,81 @@ export function tableTemplateInSchema({
 				);
 			}
 			checked = 1;
-			//TODO check column data type and default value
+			// check column data type and default value between tableInTemplate and column
+			if (column && tableInTemplate) {
+				const schemaType = column.data_type;
+				const templateType = tableInTemplate.type;
+
+				if (typeof schemaType !== 'string') {
+					errors.push(
+						`table_schema: ${table_name} / ${column_name} data_type is not a string`
+					);
+					return checked;
+				}
+				if (typeof templateType !== 'string') {
+					errors.push(
+						`table_template: ${table_name} / ${column_name} data_type is not a string`
+					);
+					return checked;
+				}
+				const templateTypeInSchmaFormat = () => {
+					if (templateType.startsWith('varchar')) {
+						return 'character varying';
+					}
+					if (templateType.startsWith('int')) {
+						return 'integer';
+					}
+					if (templateType.startsWith('serial')) {
+						return 'integer';
+					}
+					switch (templateType) {
+						case 'text':
+							return 'text';
+						case 'timestamp':
+							return 'timestamp without time zone';
+						case 'timestamptz':
+							return 'timestamp with time zone';
+						case 'boolean':
+							return 'boolean';
+						default:
+							return templateType;
+					}
+				};
+
+				if (schemaType !== templateTypeInSchmaFormat()) {
+					errors.push(
+						`table_template: ${table_name} / ${column_name} data_type is different between table_template and schema`
+					);
+				}
+
+				// TODO check default value
+
+				if (schemaType === 'charachter varying') {
+					// find length of varchar in template from format varchar(255)
+					const templateVarcharLength = parseInt(templateType.match(/\d+/)[0]);
+					const schemaVarcharLength: number | null =
+						typeof column.character_maximum_length === 'number'
+							? column.character_maximum_length
+							: null;
+
+					if (
+						schemaVarcharLength &&
+						schemaVarcharLength < templateVarcharLength
+					) {
+						errors.push(
+							`schema: ${table_name} / ${column_name} character_maximum_length is too short`
+						);
+					}
+				}
+				// check nullability
+				const schemaNullable: boolean = column.is_nullable === 'YES';
+				const templateNullable = !tableInTemplate.not_null;
+				if (schemaNullable !== templateNullable) {
+					errors.push(
+						`schema: ${table_name} / ${column_name} is_nullable is different between table_template and schema`
+					);
+				}
+			}
 		}
 		return checked;
 	}

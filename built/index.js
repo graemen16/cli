@@ -52,9 +52,11 @@ function main() {
                     return [4 /*yield*/, (0, queryList_1.logSchema)()];
                 case 2:
                     _b = _c.sent(), tables = _b.tables, columns = _b.columns;
-                    results.push((0, rule_checks_1.listColInTemplates)({ list_template: list_template, view_template: view_template, table_template: table_template }));
-                    results.push((0, rule_checks_1.snakeCase)({ list_template: list_template, view_template: view_template, table_template: table_template }));
-                    results.push((0, rule_checks_1.tablesHaveIdColumn)({ tables: tables, columns: columns }));
+                    false &&
+                        results.push((0, rule_checks_1.listColInTemplates)({ list_template: list_template, view_template: view_template, table_template: table_template }));
+                    false &&
+                        results.push((0, rule_checks_1.snakeCase)({ list_template: list_template, view_template: view_template, table_template: table_template }));
+                    false && results.push((0, rule_checks_1.tablesHaveIdColumn)({ tables: tables, columns: columns }));
                     results.push((0, rule_checks_1.tableTemplateInSchema)({ tables: tables, columns: columns, table_template: table_template }));
                     console.log('Results:');
                     console.log(results);
