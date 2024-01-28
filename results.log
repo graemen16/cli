@@ -1,0 +1,30 @@
+[28.01.2024 14:16.34.606] [LOG]   Check database
+[28.01.2024 14:16.34.849] [LOG]   Check view list
+:matchedTableColumn: 189 
+matchedViewColumn: 29 
+unMatchedListColumn: 0 
+matchedTableAndViewColumn: 0
+[28.01.2024 14:16.34.850] [LOG]   Snake case checked 923 fields
+[28.01.2024 14:16.34.853] [LOG]   Table and column in table_template are in schema: checked 406
+[28.01.2024 14:16.34.861] [LOG]   Table and column in list_template are in schema: checked 436
+[28.01.2024 14:16.34.862] [LOG]   Results:
+[28.01.2024 14:16.34.865] [LOG]   [
+  { test: 'List Columns in Templates', status: 'OK', errors: [] },
+  {
+    test: 'Table, View and List names are in snake_case',
+    status: 'OK',
+    errors: []
+  },
+  {
+    test: 'Table and column in table_template are in schema',
+    status: 'ERROR',
+    errors: [
+      'schema: meeting / meeting_end is_nullable is different between table_template (true) and schema (NO)'
+    ]
+  },
+  {
+    test: 'Table/view and column in list_template are in schema',
+    status: 'OK',
+    errors: []
+  }
+]

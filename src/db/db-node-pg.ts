@@ -1,23 +1,24 @@
 //import { unknownInputs } from "@/lib/form-utils"
 import 'dotenv/config';
-import { Pool, Client } from 'pg';
+import { Pool, Client, QueryResult } from 'pg';
 
 // pools will use environment variables
 // for connection information
 
 require('console-stamp')(console);
+const schema = process.env['POSTGRES_LOCAL_SCHEMA'];
 
 export type unknownInputs = {
 	[key: string]: unknown;
 };
 const pgConfig = {
-	database: process.env['POSTGRES_DATABASE'],
-	host: process.env['POSTGRES_HOST'],
-	user: process.env['POSTGRES_USER'],
-	password: process.env['POSTGRES_PASSWORD'],
-	port: Number.parseInt(process.env['POSTGRES_PORT'] || '0'),
+	database: process.env['POSTGRES_LOCAL_DATABASE'],
+	host: process.env['POSTGRES_LOCAL_HOST'],
+	user: process.env['POSTGRES_LOCAL_USER'],
+	password: process.env['POSTGRES_LOCAL_PASSWORD'],
+	port: Number.parseInt(process.env['POSTGRES_LOCAL_PORT'] || '0'),
 	max: 10,
-	ssl: true,
+	ssl: false,
 };
 
 export const querySchema = async (mode: string) => {
@@ -26,19 +27,19 @@ export const querySchema = async (mode: string) => {
 	let table: string = null;
 	switch (mode) {
 		case 'tables':
-			table = 'gv_dev.schema_tables';
+			table = `${schema}.app_schema_tables`;
 			break;
 		case 'columns':
-			table = 'gv_dev.schema_columns';
+			table = `${schema}.app_schema_columns`;
 			break;
 		case 'table_template':
-			table = 'gv_dev.table_template';
+			table = `${schema}.app_table_template`;
 			break;
 		case 'view_template':
-			table = 'gv_dev.view_template';
+			table = `${schema}.app_view_template`;
 			break;
 		case 'list_template':
-			table = 'gv_dev.list_template';
+			table = `${schema}.app_list_template`;
 			break;
 		default:
 			console.log('querySchema: unknown mode ' + mode);
@@ -50,7 +51,84 @@ export const querySchema = async (mode: string) => {
 	await pool.end();
 	return res;
 };
+export async function queryViewColumns(viewList: string): Promise<QueryResult<ViewColumn> | null> {
+	const tenantDb = schema;
+	if (!tenantDb) {
+		return null;
+	}
+	const pool = new Pool(pgConfig);
+	const sql = `SELECT 
+vl.column_name
+, vl.list_order
+, COALESCE (mt.data_type, mv.data_type) AS data_type
+, COALESCE (mt.char_max_len, mv.char_max_len) AS char_max_len
+, COALESCE (vl.view_label,mt.column_label,mv.column_label) AS label
+, vl.crud
+, vl.display_for 
+, vl.form_type 
+, vl.table_filter
+, mt.is_nullable
+, mt.option_source_list 
+, mt.option_source_column
+, mt.source_filter_column
+, mt.filter_by_item_column
+, mt.filter_by_text
+, mt.min_length 
+, mt.min_value 
+, mt.max_value 
+, COALESCE (mt.b_true_text ,mv.b_true_text  )  AS b_true_text
+, COALESCE (mt.b_false_text ,mv.b_false_text  )  AS b_false_text
+, mt.default_value_as_text as default_value
+, mt.table_name
+, vl.join_table_name
+, vl.join_on_column
+, vl.join_to_column
+, vl.active
+, vl.table_hide
+, vl.table_filter
 
+  from ${tenantDb}.app_list_template vl 
+  left join ${tenantDb}.app_table_template_view mt on mt.table_name = vl.table_name and mt.column_name =coalesce(vl.source_column_name ,vl.column_name)
+  and mt.table_schema  =$1 
+  left join ${tenantDb}.app_view_template mv on mv.view_name =vl.view_name and mv.column_name =coalesce(vl.source_column_name ,vl.column_name) 
+  where vl.list_name = $2
+  and vl.active = true
+  order by vl.list_order`;
+	const values = [tenantDb, viewList];
+	const res: QueryResult<ViewColumn> = await pool.query(sql, values);
+	await pool.end();
+	return res;
+}
+export type ViewColumn = {
+	column_name: string;
+	list_order: number;
+	data_type: string;
+	char_max_len?: number;
+	label: string;
+	crud: string;
+	display_for?: string;
+	form_type?: string;
+	table_filter: boolean;
+	is_nullable: boolean;
+	option_source_list?: string;
+	option_source_column?: string;
+	source_filter_column?: string;
+	filter_by_item_column?: string;
+	filter_by_text?: string;
+	min_length?: number;
+	min_value?: number;
+	max_value?: number;
+	b_true_text?: string;
+	b_false_text?: string;
+	default_value?: string;
+	table_name: string;
+	join_table_name?: string;
+	join_on_column?: string;
+	join_to_column?: string;
+	active: boolean;
+	table_hide: boolean;
+};
+/*
 export async function queryViewColumns(viewList: string): Promise<any> {
 	const pool = new Pool(pgConfig);
 	const sql = `select 
@@ -71,8 +149,8 @@ vl.column_name
 , mt."schema" 
 , mt.table_name 
   from gv_dev.view_list vl 
-  left join gv_dev.master_table mt on mt.table_name = vl.table_name and mt.column_name =vl.column_name 
-  left join gv_dev.master_view mv on mv.view_name =vl.view_name and mv.column_name =vl.column_name 
+  left join ${schema}.app_master_table mt on mt.table_name = vl.table_name and mt.column_name =vl.column_name 
+  left join ${schema}.app_master_view mv on mv.view_name =vl.view_name and mv.column_name =vl.column_name 
   where vl.list_name = $1
   order by vl.list_order`;
 	const values = [viewList];
@@ -100,6 +178,7 @@ export type ViewColumn = {
 	schema: string;
 	table_name: string;
 };
+*/
 // query view data based on a view or table name.
 export async function queryViewData({
 	viewName,
@@ -114,7 +193,7 @@ export async function queryViewData({
 }): Promise<any> {
 	let paramIndex = 1;
 	const pool = new Pool(pgConfig);
-	let sql = `select * from gv.${viewName}`;
+	let sql = `select * from ${schema}.${viewName}`;
 	let values: any[] = [];
 	if (itemId) {
 		sql += ` \nwhere id = $` + paramIndex++; // note requires query to include id column!
@@ -163,7 +242,7 @@ export async function upsertForm(
 			throw new Error('No column for key ' + key);
 		}
 		// note:  want unique values only. Couldn't use set as it doesn't support mapping
-		const tableName = `${column.schema}.${column.table_name}`;
+		const tableName = `${column.table_name}`;
 		if (!targetTables.includes(tableName)) {
 			targetTables.push(tableName);
 		}
@@ -181,9 +260,7 @@ export async function upsertForm(
 		}[] = [];
 		await Promise.all(
 			targetTables.map(async (table) => {
-				const res = updateMode
-					? await updateTable(table)
-					: await insertTable(table);
+				const res = updateMode ? await updateTable(table) : await insertTable(table);
 				console.log('table res: ', res);
 				insertRes.push(res);
 			})
@@ -200,7 +277,7 @@ export async function upsertForm(
 		let statementIndex = 1;
 		let values: any[] = [];
 		// build the insert statement
-		let sql = `insert into ${table} \n`;
+		let sql = `insert into ${schema}.${table} \n`;
 		let columnsSql = '(';
 		let valuesSql = 'values (';
 
@@ -226,6 +303,7 @@ export async function upsertForm(
 			table: string;
 			insertedId: number | undefined;
 		} = { table: table, insertedId: res.rows[0].id };
+
 		return response;
 	}
 
@@ -233,7 +311,7 @@ export async function upsertForm(
 		let statementIndex = 1;
 		//let values: { index: number; value: any }[] = []
 		let values: any[] = [];
-		let sql = `update ${table} set \n`;
+		let sql = `update ${schema}.${table} set \n`;
 		keys.forEach((key) => {
 			const column = columns.find((column) => column.column_name === key);
 			if (column) {

@@ -32,12 +32,9 @@ export function listColInTemplates({
         */
 		let view = null;
 		let table = null;
+		let lookingforColumn = list.source_column_name || list.column_name;
 		if (list.view_name) {
-			view = view_template.find(
-				(view) =>
-					view.view_name === list.view_name &&
-					view.column_name === list.column_name
-			);
+			view = view_template.find((view) => view.view_name === list.view_name && view.column_name === lookingforColumn);
 			if (view) {
 				matchedViewColumn++;
 			}
@@ -51,9 +48,7 @@ export function listColInTemplates({
 		}
 		if (list.table_name) {
 			table = table_template.find(
-				(table) =>
-					table.table_name === list.table_name &&
-					table.column_name === list.column_name
+				(table) => table.table_name === list.table_name && table.column_name === lookingforColumn
 			);
 			if (table) {
 				matchedTableColumn++;
@@ -68,13 +63,13 @@ export function listColInTemplates({
 		}
 		if (view && table) {
 			errors.push(
-				`list_template: ${list.view_name} / ${list.table_name} / ${list.column_name} is in both view_template and table_template`
+				`list_template: ${list.list_name} / ${list.view_name} / ${list.table_name} / ${list.column_name} is in both view_template and table_template`
 			);
 			matchedTableAndViewColumn++;
 		}
 		if (!view && !table) {
 			errors.push(
-				`list_template: ${list.view_name} / ${list.table_name} / ${list.column_name} is not in either view_template or table_template`
+				`list_template: ${list.list_name} / ${list.view_name} / ${list.table_name} / ${list.column_name} (${list.source_column_name}} is not in either view_template or table_template`
 			);
 			unMatchedListColumn++;
 		}
@@ -150,14 +145,8 @@ export function snakeCase({
 function isSnakeCase(str: string) {
 	return /^[a-z]+(?:_[a-z0-9]+)*$/g.test(str);
 }
-
-export function tablesHaveIdColumn({
-	tables,
-	columns,
-}: {
-	tables: unknownInputs[];
-	columns: unknownInputs[];
-}) {
+// tables may have UID or other columnt as ID, so check below is not valid. Not used.
+export function tablesHaveIdColumn({ tables, columns }: { tables: unknownInputs[]; columns: unknownInputs[] }) {
 	const test = 'Tables have id column';
 	let status = 'OK';
 	let errors = [];
@@ -167,25 +156,14 @@ export function tablesHaveIdColumn({
 		if (table.table_name && table.table_type === 'BASE TABLE') {
 			checked++;
 			// check if there is a column with table_name and column_name = id
-			const column = columns.find(
-				(column) =>
-					column.table_name === table.table_name && column.column_name === 'id'
-			);
+			const column = columns.find((column) => column.table_name === table.table_name && column.column_name === 'id');
 			if (!column) {
-				errors.push(
-					`table_template: ${table.table_name} does not have id column`
-				);
+				errors.push(`table_template: ${table.table_name} does not have id column`);
 			} else {
 				const dataType = column.data_type;
 				const columnDefault = column.column_default;
-				if (
-					dataType !== 'integer' ||
-					typeof columnDefault !== 'string' ||
-					!columnDefault.startsWith('nextval(')
-				) {
-					errors.push(
-						`table_template: ${table.table_name} id column is not auto serial`
-					);
+				if (dataType !== 'integer' || typeof columnDefault !== 'string' || !columnDefault.startsWith('nextval(')) {
+					errors.push(`table_template: ${table.table_name} id column is not auto serial`);
 				}
 			}
 		}
@@ -212,24 +190,15 @@ export function tableTemplateInSchema({
 	let errors = [];
 	let checked = 0;
 	table_template.forEach((table) => {
-		if (
-			typeof table.table_name === 'string' &&
-			typeof table.column_name === 'string'
-		) {
+		if (typeof table.table_name === 'string' && typeof table.column_name === 'string') {
 			checked += checkTableInSchema(table.table_name);
-			checked += checkColumnInSchema(
-				table.table_name,
-				table.column_name,
-				table
-			);
+			checked += checkColumnInSchema(table.table_name, table.column_name, table);
 		}
 	});
 	if (errors.length > 0) {
 		status = 'ERROR';
 	}
-	console.log(
-		`Table and column in table_template are in schema: checked ${checked}`
-	);
+	console.log(`Table and column in table_template are in schema: checked ${checked}`);
 	return { test, status, errors };
 
 	function checkTableInSchema(table_name: string) {
@@ -243,25 +212,17 @@ export function tableTemplateInSchema({
 		}
 		return checked;
 	}
-	function checkColumnInSchema(
-		table_name: string,
-		column_name: string,
-		tableInTemplate: unknownInputs
-	) {
+	function checkColumnInSchema(table_name: string, column_name: string, tableInTemplate: unknownInputs) {
 		let checked = 0;
 		if (table_name && column_name) {
-			const column = columns.find(
-				(column) =>
-					column.table_name === table_name && column.column_name === column_name
-			);
+			const column = columns.find((column) => column.table_name === table_name && column.column_name === column_name);
 			if (!column) {
-				errors.push(
-					`table_template: ${table_name} / ${column_name} is not in schema`
-				);
+				errors.push(`table_template: ${table_name} / ${column_name} is not in schema`);
 			}
 			checked = 1;
 			// check column data type and default value between tableInTemplate and column
 			if (column && tableInTemplate) {
+				/*
 				const schemaType = column.data_type;
 				const templateType = tableInTemplate.type;
 
@@ -326,15 +287,69 @@ export function tableTemplateInSchema({
 						);
 					}
 				}
+				*/
 				// check nullability
 				const schemaNullable: boolean = column.is_nullable === 'YES';
 				const templateNullable = !tableInTemplate.not_null;
 				if (schemaNullable !== templateNullable) {
 					errors.push(
-						`schema: ${table_name} / ${column_name} is_nullable is different between table_template and schema`
+						`schema: ${table_name} / ${column_name} is_nullable is different between table_template (${templateNullable}) and schema (${column.is_nullable})`
 					);
 				}
 			}
+		}
+		return checked;
+	}
+}
+
+// check that each table and column in table_template has corresponding table and column in schema
+export function listTemplateInSchema({
+	tables,
+	columns,
+	list_template,
+}: {
+	tables: unknownInputs[];
+	columns: unknownInputs[];
+	list_template: unknownInputs[];
+}) {
+	const test = 'Table/view and column in list_template are in schema';
+	let status = 'OK';
+	let errors = [];
+	let checked = 0;
+	list_template.forEach((list) => {
+		const sourceTableName = list.table_name || list.view_name;
+		if (typeof sourceTableName === 'string' && typeof list.column_name === 'string') {
+			checked += checkTableInSchema(sourceTableName);
+			checked += checkColumnInSchema(list.column_name, list);
+		}
+	});
+	if (errors.length > 0) {
+		status = 'ERROR';
+	}
+	console.log(`Table and column in list_template are in schema: checked ${checked}`);
+	return { test, status, errors };
+
+	function checkTableInSchema(table_name: string) {
+		let checked = 0;
+		if (table_name) {
+			const table = tables.find((table) => table.table_name === table_name);
+			if (!table) {
+				errors.push(`list_template: ${table_name} is not in schema`);
+			}
+			checked = 1;
+		}
+		return checked;
+	}
+	function checkColumnInSchema(column_name: string, list: unknownInputs) {
+		let checked = 0;
+		if (list.list_name && column_name) {
+			const column = columns.find(
+				(column) => column.table_name === list.list_name && column.column_name === column_name
+			);
+			if (!column) {
+				errors.push(`list_template: ${list.list_name} / ${column_name} is not in schema`);
+			}
+			checked = 1;
 		}
 		return checked;
 	}
